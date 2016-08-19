@@ -5,6 +5,16 @@
 
 var port = process.env.PORT || 3000;
 
+// ----------------------------------------------------------------------
+//  Init DB
+var Datastore = require('nedb');
+
+db = {};
+db.receipts = new Datastore({filename:'./data/receipts', autoload: true});
+
+// ----------------------------------------------------------------------
+//  Start API server
+
 var express = require('express');
 var app = express();
 
@@ -13,7 +23,11 @@ app.use(bodyParser.json());
 
 app.post('/receipts', function (req, res) {
   console.log("POST receipts");
-  res.send();
+
+  data = req.body;
+  db.receipts.insert([data], function (err, newDocs) {
+    res.send(newDocs);
+  });
 });
 
 app.get('/receipts/:id', function (req, res) {
@@ -41,8 +55,14 @@ app.get('/receipts/:id', function (req, res) {
     SerialNo: 133742
   }
 
-  res.send(dummy);
+  db.receipts.find({}, function (err, docs) {
+    if (err) {
+      throw err;
+    }
+    res.send(docs);
+  });
 });
+
 
 app.listen(port, function () {
   console.log('Example app listening on port 3000!');
