@@ -64,7 +64,6 @@ db.products.insert(prods, function (err, docs) {
 
 var receipts = [
   {
-    "buyerTaxID": 24564936,
     "taxQuarter": "03-04",
     "items": [
       {

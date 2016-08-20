@@ -34,7 +34,7 @@ function getCompanyFromTax(id, next) {
       }
 
       if (docs.length == 0) {
-	next("CompanyID doesn't exists");
+	next("Company with that Tax id doesn't exists");
 	return
       }
 
@@ -266,7 +266,13 @@ app.get('/companies/:id/receipts', function (req, res) {
     // Add companyID for reference
     for(i=0; i<companySell.length; i++) {
 
+      // Skip thos who are the last one in the chain
+      if (companySell[i].buyerTaxID == null) {
+	continue;
+      }
+      
       var newDoc = companySell[i];
+      console.log(companySell[i]);
       getCompanyFromTax(companySell[i].buyerTaxID, function(err, comp) {
 	if (err) {
 	  writeError(res, err);
