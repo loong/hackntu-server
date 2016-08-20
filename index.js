@@ -239,7 +239,7 @@ app.get('/receipts/:id*?', function (req, res) {
 });
 
 app.post('/companies/:id/products', function (req, res) {
-  var cid = req.params.id;
+  var cid = parseInt(req.params.id);
 
   var data = req.body;
   data.companyID = cid;
