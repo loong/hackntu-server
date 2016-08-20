@@ -99,7 +99,7 @@ function toChain(msg) {
     to: web3.eth.accounts[0],
     value:web3.toWei(0.02,'ether'),
     data:web3.toHex(msg),
-    gas: 200000000
+    gas: 2000000
   });
   
   var err, mined = checkIsMined(tx, 0, 60);
@@ -128,7 +128,9 @@ function beautify(obj) {
 }
 
 function writeError(res, msg) {
-  if (res.headersSent) {
+  console.error(msg);
+  
+  if (res.headersSent) { // prevent resending
     return
   }
   res.writeHead(400, {'Content-Type': 'text/plain'});
@@ -239,7 +241,7 @@ app.get('/receipts/:id*?', function (req, res) {
 app.post('/companies/:id/products', function (req, res) {
   var cid = req.params.id;
 
-  var data = req.body
+  var data = req.body;
   data.companyID = cid;
 
   db.products.insert([data], function (err, newDocs) {
@@ -248,9 +250,13 @@ app.post('/companies/:id/products', function (req, res) {
 });
   
 app.get('/companies/:id/products', function (req, res) {
-  var cid = req.params.id;
+  var cid = parseInt(req.params.id);
 
   db.products.find({companyID: cid}, function (err, docs) {
+    if (err) {
+      writeError(res, err);
+      return
+    }
 
     beautify(docs);
     res.send(docs);
@@ -314,5 +320,5 @@ if (isFrontTest) {
 }
 
 app.listen(port, function () {
-  console.log('Example app listening on port 3000!');
+  console.log('Example app listening on port 4000!');
 });

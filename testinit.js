@@ -38,22 +38,22 @@ db.companies.insert(comps, function (err, docs) {
 
 var prods = [
   {
-    "name": "Red Tomatoes",
-    "price":20,
-    "taxCategory":"food",
-    "fdaFoodType":"agriculture",
-    "productionDate":1471620321,
-    "expirationDate":1471820321,
-    "companyID":4711337
+    "name": "Tomatoes",
+    "price": 20,
+    "taxCategory": "food",
+    "fdaFoodType": "agriculture",
+    "productionDate": 1471620321,
+    "expirationDate": 1471820512,
+    "companyID": 4711337,
   },
   {
-    "name":"Egg",
-    "price":2,
-    "taxCategory":"food",
-    "fdaFoodType":"agriculture",
-    "productionDate":1471620321,
-    "expirationDate":1471820321,
-    "companyID":4711337
+    "name": "Egg",
+    "price": 2,
+    "taxCategory": "food",
+    "fdaFoodType": "agriculture",
+    "productionDate": 1471620321,
+    "expirationDate": 1471820321,
+    "companyID": 4711337,
   }
 ]
 
