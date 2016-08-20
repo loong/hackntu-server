@@ -1,4 +1,5 @@
 var port = process.env.PORT || 3000;
+var isFrontTest = process.env.FrontTest || false;
 
 // ----------------------------------------------------------------------
 //  Init DB
@@ -6,6 +7,7 @@ var Datastore = require('nedb');
 
 db = {};
 db.receipts = new Datastore({filename:'./data/receipts', autoload: true});
+db.products = new Datastore({filename:'./data/products', autoload: true});
 
 // ----------------------------------------------------------------------
 //  Blockchain helpers
@@ -33,9 +35,12 @@ function checkIsMined(tx, tries, maxTries) {
 
 function checkIsValid(obj) {
   txid = obj.chainID;
+  rid = obj._id;
+
   if (txid == null) {
     return false
   }
+
   chainData = fromChain(txid);
 
   // Temporarily remove chainID to create Hash
@@ -43,7 +48,8 @@ function checkIsValid(obj) {
   delete obj._id;
   hash = sha256(JSON.stringify(obj));
   obj.chainID = txid;
-
+  obj.id = rid;
+  
   if (chainData == hash) {
     return true
   }
@@ -66,7 +72,7 @@ function toChain(msg) {
     return err
   }
 
-  return mined.hash;
+  return null, mined.hash;
 }
 
 function fromChain(txid) {
@@ -96,45 +102,79 @@ app.post('/receipts', function (req, res) {
 
   data = req.body;
 
-  msg = sha256(JSON.stringify(data));
-  txid = toChain(msg);
-  console.log("TxID:" + txid);
-  data.chainID = txid;
+  if (!isFrontTest) {
+    var msg = sha256(JSON.stringify(data));
+    var err, txid = toChain(msg);
+    // @todo handle error
+    
+    console.log("TxID:" + txid);
+    data.chainID = txid;
+  }
 
   db.receipts.insert([data], function (err, newDocs) {
     res.send(newDocs);
   });
 });
 
-app.get('/receipts/:id', function (req, res) {
+app.get('/receipts/:id*?', function (req, res) {
   var rid = req.params.id;
+  var search = {}
 
-  db.receipts.find({}, function (err, docs) {
+  if (rid != null) {
+    search._id = rid;
+  }
+  
+  db.receipts.find(search, function (err, docs) {
     if (err) {
       throw err;
     }
 
     // Check every element for validity
-    for(i=0; i<docs.length; i++) {
-      var elem = docs[i];
-      
-      if (!checkIsValid(elem)) {
-	console.log("Not valid!");
-	newElem = {
-	  WARNING: "Object got tampered!",
-	  sellerTaxID: elem.SellerTaxID,
-	  buyerTaxID: elem.buyerTaxID,
-	  chainID: elem.chainID
-	}
+    if (!isFrontTest) {
+      for(i=0; i<docs.length; i++) {
+	var elem = docs[i];
+	
+	if (!checkIsValid(elem)) {
+	  console.log("Not valid!");
+	  newElem = {
+	    WARNING: "Object got tampered!",
+	    id: elem.id,
+	    sellerTaxID: elem.SellerTaxID,
+	    buyerTaxID: elem.buyerTaxID,
+	    chainID: elem.chainID
+	  }
 
-	docs[i] = newElem;
+	  docs[i] = newElem;
+	};
       };
-    };
+    }
     
     res.send(docs);
   });
 });
 
+app.post('/companies/:id/products', function (req, res) {
+  var cid = req.params.id;
+
+  var data = req.body
+  data.companyID = cid;
+
+  db.products.insert([data], function (err, newDocs) {
+    res.send(newDocs);
+  });
+});
+  
+app.get('/companies/:id/products', function (req, res) {
+  var cid = req.params.id;
+
+  db.products.find({companyID: cid}, function (err, docs) {
+    res.send(docs);
+  });
+});
+
+if (isFrontTest) {
+  console.log("Is Testing");
+}
 
 app.listen(port, function () {
   console.log('Example app listening on port 3000!');
