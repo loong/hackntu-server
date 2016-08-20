@@ -249,6 +249,23 @@ app.get('/companies/:id/receipts', function (req, res) {
 
   db.receipts.find({companyID: parseInt(cid)}, function (err, companySell) {
     beautify(companySell);
+
+    // Add companyID for reference
+    for(i=0; i<companySell.length; i++) {
+
+      var newDoc = companySell[i];
+      getCompanyFromTax(companySell[i].buyerTaxID, function(err, comp) {
+	if (err) {
+	  writeError(res, err);
+	  return
+	}
+	
+	newDoc.buyerCompanyID = comp.id;
+      });
+
+      companySell[i] = newDoc;
+    }
+  
       
     getCompany(cid, function(err, comp) {
       if (err) {
