@@ -18,7 +18,7 @@ function getCompany(id, next) {
       }
 
       if (docs.length == 0) {
-	next(new Error("CompanyID doesn't exists"));
+	next("CompanyID doesn't exists");
 	return
       }
 
@@ -142,6 +142,8 @@ app.post('/companies/:cid/receipts', function (req, res) {
     var data = req.body;
     data.companyID = comp.id;
     data.sellerTaxID = comp.taxID;
+    data.company = comp.name;
+    data.address = comp.address;
 
     if (!isFrontTest) {
       var msg = sha256(JSON.stringify(data));

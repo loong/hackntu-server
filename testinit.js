@@ -8,22 +8,25 @@ var comps = [
   {
     id: 4711337,
     taxID: 99338103,
+    address: "No. 1, Section 4, Roosevelt Rd, Da’an District, Taipei City",
     name: "Foodchain Inc."
   },
   {
     id: 2606199,
     taxID: 83028401,
+    address: "21 Nanda Rd, Hsinchu City",
     name: "Distributer B"
   },
   {
     id: 4213377,
     taxID: 18371982,
+    address: "42 Dongmen Rd, Hualien County",
     name: "Farmer Bob"
   },
   {
     id: 4247117,
     taxID: 30102839,
-    name: "Farmer Jason"
+    name: "Chikan Rd, Tainan County"
   }
 ];
 
