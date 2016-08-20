@@ -128,6 +128,9 @@ function beautify(obj) {
 }
 
 function writeError(res, msg) {
+  if (res.headersSent) {
+    return
+  }
   res.writeHead(400, {'Content-Type': 'text/plain'});
   res.end(msg);
 }
