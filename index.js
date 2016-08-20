@@ -1,5 +1,3 @@
-//var Web3 = require('web3');
-//var web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
 //var tx = web3.eth.sendTransaction({ "from": web3.eth.accounts[0], to: web3.eth.accounts[0], value:web3.toWei(0.02,'ether'), data:web3.toHex('test'), gas: 200000000});
 //console.log(tx);
 
@@ -11,6 +9,80 @@ var Datastore = require('nedb');
 
 db = {};
 db.receipts = new Datastore({filename:'./data/receipts', autoload: true});
+
+// ----------------------------------------------------------------------
+//  Blockchain helpers
+// Add hash to blockchain
+var Web3 = require('web3');
+var web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
+var sha256 = require('sha256');
+var sleep = require('sleep');
+
+function checkIsMined(tx, tries, maxTries) {
+  if (tries >= maxTries) {
+    return new Error("Max trial reached, trannsaction could not be mined. Is miner running?");
+  }
+  
+  var mined = web3.eth.getTransaction(tx);
+  if (mined != null && mined.blockNumber != null) {
+    console.log(mined);
+    return null, mined
+  }
+
+  sleep.sleep(1);
+  
+  return checkIsMined(tx, tries+1, maxTries);
+}
+
+function checkIsValid(obj) {
+  txid = obj.chainID;
+  if (txid == null) {
+    return false
+  }
+  chainData = fromChain(txid);
+
+  // Temporarily remove chainID to create Hash
+  delete obj.chainID;
+  delete obj._id;
+  console.log(obj);
+  hash = sha256(JSON.stringify(obj));
+  obj.chainID = txid;
+
+  console.log("1: " + chainData);
+  console.log("2: " + hash);
+  
+  if (chainData == hash) {
+    return true
+  }
+
+  return false
+}
+
+function toChain(msg) {
+  var tx = web3.eth.sendTransaction({
+    "from": web3.eth.accounts[0],
+    to: web3.eth.accounts[0],
+    value:web3.toWei(0.02,'ether'),
+    data:web3.toHex(msg),
+    gas: 200000000
+  });
+  
+  var err, mined = checkIsMined(tx, 0, 60);
+  if (err) {
+    console.error(err);
+    return err
+  }
+
+  console.log(mined.hash);
+  return mined.hash;
+}
+
+function fromChain(txid) {
+  var tx = web3.eth.getTransaction(txid);
+  var data = web3.toAscii(tx.input);
+
+  return data;
+}
 
 // ----------------------------------------------------------------------
 //  Start API server
@@ -31,6 +103,12 @@ app.post('/receipts', function (req, res) {
   console.log("POST receipts");
 
   data = req.body;
+
+  msg = sha256(JSON.stringify(data));
+  txid = toChain(msg);
+  console.log("TxID:" + txid);
+  data.chainID = txid;
+
   db.receipts.insert([data], function (err, newDocs) {
     res.send(newDocs);
   });
@@ -38,33 +116,15 @@ app.post('/receipts', function (req, res) {
 
 app.get('/receipts/:id', function (req, res) {
   var rid = req.params.id;
-  
-  var dummy = {
-    id: rid,
-    company: "Foodchain Inc.",
-    address: "No. 1, Section 4, Roosevelt Rd, Da’an District, Taipei City, 10617",
-    contact: "0912998210",
-    sellerTaxID: 42434667,
-    buyerTaxID: 24564936,
-    taxQuarter: "03-04",
-    items: [{
-      name: "Red Tomatoes",
-      qty: 10,
-      price: 20,
-      taxCategory: "food",
-      fdaCategory: "agriculture",
-      ItemProductionDate: 1471620321,
-      ItemExpirationDate: 1471620321+60*60*24*90
-    }],
-    Tax: 123,
-    MachineNo: 4711,
-    SerialNo: 133742
-  }
 
   db.receipts.find({}, function (err, docs) {
     if (err) {
       throw err;
     }
+
+    docs.forEach(function(elem) {
+      console.log(checkIsValid(elem));
+    });
     res.send(docs);
   });
 });
