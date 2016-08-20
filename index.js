@@ -135,6 +135,13 @@ function writeError(res, msg) {
   res.end(msg);
 }
 
+function send(res, obj) {
+  if (res.headersSent) {
+    return
+  }
+  res.send(obj);
+}
+
 // ----------------------------------------------------------------------
 //  Start API server
 
@@ -186,7 +193,7 @@ app.post('/companies/:cid/receipts', function (req, res) {
     }
 
     db.receipts.insert([data], function (err, newDocs) {
-      res.send(newDocs);
+      send(res, newDocs);
     });
   
   });
@@ -225,7 +232,7 @@ app.get('/receipts/:id*?', function (req, res) {
       };
     }
     
-    res.send(docs);
+    send(res, docs);
   });
 });
 
@@ -282,7 +289,7 @@ app.get('/companies/:id/receipts', function (req, res) {
       db.receipts.find({buyerTaxID: comp.taxID}, function (err, companyBuy) {
 	beautify(companyBuy);
 
-	res.send({
+	send(res, {
 	  name: comp.name,
 	  buyFrom: companyBuy,
 	  sellTo: companySell
