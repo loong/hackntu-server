@@ -83,6 +83,15 @@ function fromChain(txid) {
 }
 
 // ----------------------------------------------------------------------
+//  General Helpers
+function beautify(obj) {
+  for(i=0; i<obj.length; i++) {
+    obj[i].id = obj[i]._id;
+    delete obj[i]._id;
+  }
+}
+
+// ----------------------------------------------------------------------
 //  Start API server
 
 var express = require('express');
@@ -168,6 +177,8 @@ app.get('/companies/:id/products', function (req, res) {
   var cid = req.params.id;
 
   db.products.find({companyID: cid}, function (err, docs) {
+
+    beautify(docs);
     res.send(docs);
   });
 });
