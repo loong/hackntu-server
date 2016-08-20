@@ -6,8 +6,25 @@ var isFrontTest = process.env.FrontTest || false;
 var Datastore = require('nedb');
 
 db = {};
-db.receipts = new Datastore({filename:'./data/receipts', autoload: true});
-db.products = new Datastore({filename:'./data/products', autoload: true});
+db.receipts  = new Datastore({filename:'./data/receipts', autoload: true});
+db.products  = new Datastore({filename:'./data/products', autoload: true});
+db.companies = new Datastore({filename:'./data/companies', autoload: true});
+
+function getCompany(id, next) {
+    db.companies.find({id: parseInt(id)}, function (err, docs) {
+      if (err) {
+	next(err);
+	return
+      }
+
+      if (docs.length == 0) {
+	next(new Error("CompanyID doesn't exists"));
+	return
+      }
+
+      next(null, docs[0])
+  });
+}
 
 // ----------------------------------------------------------------------
 //  Blockchain helpers
@@ -91,6 +108,11 @@ function beautify(obj) {
   }
 }
 
+function writeError(res, msg) {
+  res.writeHead(400, {'Content-Type': 'text/plain'});
+  res.end(msg);
+}
+
 // ----------------------------------------------------------------------
 //  Start API server
 
@@ -106,22 +128,34 @@ app.use(function(req, res, next) {
   next();
 });
 
-app.post('/receipts', function (req, res) {
+app.post('/companies/:cid/receipts', function (req, res) {
   console.log("POST receipts");
 
-  data = req.body;
+  var cid = req.params.cid;
 
-  if (!isFrontTest) {
-    var msg = sha256(JSON.stringify(data));
-    var err, txid = toChain(msg);
-    // @todo handle error
+  getCompany(cid, function(err, comp) {
+    if (err) {
+      writeError(res, err);
+      return
+    }
     
-    console.log("TxID:" + txid);
-    data.chainID = txid;
-  }
+    var data = req.body;
+    data.companyID = comp.id;
+    data.sellerTaxID = comp.taxID;
 
-  db.receipts.insert([data], function (err, newDocs) {
-    res.send(newDocs);
+    if (!isFrontTest) {
+      var msg = sha256(JSON.stringify(data));
+      var err, txid = toChain(msg);
+      // @todo handle error
+      
+      console.log("TxID:" + txid);
+      data.chainID = txid;
+    }
+
+    db.receipts.insert([data], function (err, newDocs) {
+      res.send(newDocs);
+    });
+  
   });
 });
 
@@ -182,6 +216,35 @@ app.get('/companies/:id/products', function (req, res) {
     res.send(docs);
   });
 });
+
+app.get('/companies/:id/receipts', function (req, res) {
+  var cid = req.params.id;
+
+  db.receipts.find({companyID: parseInt(cid)}, function (err, companySell) {
+    beautify(companySell);
+      
+    getCompany(cid, function(err, comp) {
+      if (err) {
+	writeError(res, err);
+	return
+      }
+
+      db.receipts.find({buyerTaxID: comp.taxID}, function (err, companyBuy) {
+	beautify(companyBuy);
+
+	res.send({
+	  name: comp.name,
+	  buyFrom: companyBuy,
+	  sellTo: companySell
+	});
+	
+      });
+      
+    });
+    
+  });
+});
+
 
 if (isFrontTest) {
   console.log("Is Testing");
