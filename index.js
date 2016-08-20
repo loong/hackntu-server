@@ -1,6 +1,3 @@
-//var tx = web3.eth.sendTransaction({ "from": web3.eth.accounts[0], to: web3.eth.accounts[0], value:web3.toWei(0.02,'ether'), data:web3.toHex('test'), gas: 200000000});
-//console.log(tx);
-
 var port = process.env.PORT || 3000;
 
 // ----------------------------------------------------------------------
@@ -44,13 +41,9 @@ function checkIsValid(obj) {
   // Temporarily remove chainID to create Hash
   delete obj.chainID;
   delete obj._id;
-  console.log(obj);
   hash = sha256(JSON.stringify(obj));
   obj.chainID = txid;
 
-  console.log("1: " + chainData);
-  console.log("2: " + hash);
-  
   if (chainData == hash) {
     return true
   }
@@ -73,7 +66,6 @@ function toChain(msg) {
     return err
   }
 
-  console.log(mined.hash);
   return mined.hash;
 }
 
@@ -122,9 +114,23 @@ app.get('/receipts/:id', function (req, res) {
       throw err;
     }
 
-    docs.forEach(function(elem) {
-      console.log(checkIsValid(elem));
-    });
+    // Check every element for validity
+    for(i=0; i<docs.length; i++) {
+      var elem = docs[i];
+      
+      if (!checkIsValid(elem)) {
+	console.log("Not valid!");
+	newElem = {
+	  WARNING: "Object got tampered!",
+	  sellerTaxID: elem.SellerTaxID,
+	  buyerTaxID: elem.buyerTaxID,
+	  chainID: elem.chainID
+	}
+
+	docs[i] = newElem;
+      };
+    };
+    
     res.send(docs);
   });
 });
