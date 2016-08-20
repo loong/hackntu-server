@@ -26,6 +26,22 @@ function getCompany(id, next) {
   });
 }
 
+function getCompanyFromTax(id, next) {
+    db.companies.find({taxID: parseInt(id)}, function (err, docs) {
+      if (err) {
+	next(err);
+	return
+      }
+
+      if (docs.length == 0) {
+	next("CompanyID doesn't exists");
+	return
+      }
+
+      next(null, docs[0])
+  });
+}
+
 // ----------------------------------------------------------------------
 //  Blockchain helpers
 // Add hash to blockchain
