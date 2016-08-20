@@ -1,4 +1,4 @@
-var port = process.env.PORT || 3000;
+var port = process.env.PORT || 4000;
 var isFrontTest = process.env.FrontTest || false;
 
 // ----------------------------------------------------------------------
@@ -82,6 +82,9 @@ function checkIsValid(obj) {
   hash = sha256(JSON.stringify(obj));
   obj.chainID = txid;
   obj.id = rid;
+
+  //console.log(hash);
+  //console.log(chainData);
   
   if (chainData == hash) {
     return true
