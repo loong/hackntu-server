@@ -144,6 +144,15 @@ app.use(function(req, res, next) {
   next();
 });
 
+app.get('/companies', function (req, res) {
+  var cid = req.params.id;
+
+  db.companies.find({}, function (err, docs) {
+    res.send(docs);
+  });
+});
+
+
 app.post('/companies/:cid/receipts', function (req, res) {
   console.log("POST receipts");
 
