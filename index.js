@@ -11,7 +11,12 @@ db.products  = new Datastore({filename:'./data/products', autoload: true});
 db.companies = new Datastore({filename:'./data/companies', autoload: true});
 
 function getCompany(id, next) {
-    db.companies.find({id: parseInt(id)}, function (err, docs) {
+  if (typeof id === 'string' || id instanceof String) {
+    console.log("CompanyFromTax: is string");
+    id = parseInt(id);
+  }
+
+  db.companies.find({id: id}, function (err, docs) {
       if (err) {
 	next(err);
 	return
@@ -27,18 +32,29 @@ function getCompany(id, next) {
 }
 
 function getCompanyFromTax(id, next) {
-    db.companies.find({taxID: parseInt(id)}, function (err, docs) {
-      if (err) {
-	next(err);
-	return
-      }
+  if (typeof id === 'string' || id instanceof String) {
+    console.log("CompanyFromTax: is string");
+    id = parseInt(id);
+  }
+  
+  db.companies.find({taxID: id}, function (err, docs) {
+    if (err) {
+      next(err);
+      return
+    }
 
-      if (docs.length == 0) {
-	next("Company with that Tax id doesn't exists");
-	return
-      }
+    if (docs.length == 0) {
+      next(null, {
+	id: 1992133,
+	taxID: 0,
+	address: "Pucheng No. 20, Da’an District, Taipei City",
+	name: "Customer"
+      })
 
-      next(null, docs[0])
+      return
+    }
+
+    next(null, docs[0])
   });
 }
 
@@ -82,14 +98,17 @@ function checkIsValid(obj) {
   hash = sha256(JSON.stringify(obj));
   obj.chainID = txid;
   obj.id = rid;
-
-  //console.log(hash);
-  //console.log(chainData);
   
   if (chainData == hash) {
     return true
   }
 
+  console.log("-----------");
+  console.log("Fingerprint of Receipt: "+hash);
+  console.log("Fingerprint on Chain:   "+chainData);
+  console.log("Warning mismatch");
+  console.log("-----------");
+  
   return false
 }
 
@@ -179,25 +198,35 @@ app.post('/companies/:cid/receipts', function (req, res) {
       return
     }
     
-    var data = req.body;
-    data.companyID = comp.id;
-    data.sellerTaxID = comp.taxID;
-    data.company = comp.name;
-    data.address = comp.address;
+    getCompanyFromTax(req.body.buyerTaxID, function(err, buyerComp){
+      if (err) {
+	console.error(err);
+	return
+      }
 
-    if (!isFrontTest) {
-      var msg = sha256(JSON.stringify(data));
-      var err, txid = toChain(msg);
-      // @todo handle error
+      var data = req.body;
+      data.companyID = comp.id;
+      data.sellerTaxID = comp.taxID;
+      data.company = comp.name;
+      data.address = comp.address;
+
+      data.buyerCompany = buyerComp.name;
+      data.buyerCompanyID = buyerComp.id;
       
-      console.log("TxID:" + txid);
-      data.chainID = txid;
-    }
+      if (!isFrontTest) {
+	var msg = sha256(JSON.stringify(data));
+	var err, txid = toChain(msg);
+	// @todo handle error
+	
+	console.log("TxID:" + txid);
+	data.chainID = txid;
+      }
 
-    db.receipts.insert([data], function (err, newDocs) {
-      send(res, newDocs);
-    });
-  
+      db.receipts.insert([data], function (err, newDocs) {
+	send(res, newDocs);
+      });
+
+    })  
   });
 });
 
@@ -220,7 +249,6 @@ app.get('/receipts/:id*?', function (req, res) {
 	var elem = docs[i];
 	
 	if (!checkIsValid(elem)) {
-	  console.log("Not valid!");
 	  newElem = {
 	    WARNING: "Object got tampered!",
 	    id: elem.id,
@@ -267,6 +295,8 @@ app.get('/companies/:id/receipts', function (req, res) {
   var cid = req.params.id;
 
   db.receipts.find({companyID: parseInt(cid)}, function (err, companySell) {
+    console.log("sell:");
+    console.log(companySell);
     beautify(companySell);
 
     // Add companyID for reference
@@ -278,7 +308,7 @@ app.get('/companies/:id/receipts', function (req, res) {
       }
       
       var newDoc = companySell[i];
-      console.log(companySell[i]);
+      console.log(companySell[i].buyerTaxID);
       getCompanyFromTax(companySell[i].buyerTaxID, function(err, comp) {
 	if (err) {
 	  writeError(res, err);
@@ -286,6 +316,7 @@ app.get('/companies/:id/receipts', function (req, res) {
 	}
 	
 	newDoc.buyerCompanyID = comp.id;
+	newDoc.buyerCompany = comp.name;
       });
 
       companySell[i] = newDoc;
@@ -299,6 +330,8 @@ app.get('/companies/:id/receipts', function (req, res) {
       }
 
       db.receipts.find({buyerTaxID: comp.taxID}, function (err, companyBuy) {
+	console.log("buy:");
+	console.log(companyBuy);
 	beautify(companyBuy);
 
 	send(res, {
