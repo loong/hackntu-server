@@ -7,7 +7,7 @@ db.receipts.find({}, function (err, docs) {
     throw err;
   }
 
-  db.receipts.update({ _id: docs[0]._id }, { $set: { taxQuarter: '01-02' } }, { multi: true }, function (err, numReplaced) {
+  db.receipts.update({ _id: docs[docs.length-1]._id }, { $set: { taxQuarter: '01-02' } }, { multi: true }, function (err, numReplaced) {
     if (err) {
       console.error(err);
     }
